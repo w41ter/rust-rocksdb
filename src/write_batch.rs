@@ -106,7 +106,7 @@ impl<const TRANSACTION: bool> WriteBatchWithTransaction<TRANSACTION> {
     pub fn data(&self) -> &[u8] {
         unsafe {
             let mut batch_size: size_t = 0;
-            let batch_data = ffi::rocksdb_write_batch_data(self.inner, &mut batch_size);
+            let batch_data = ffi::rocksdb_writebatch_data(self.inner, &mut batch_size);
             std::slice::from_raw_parts(batch_data as _, batch_size as usize)
         }
     }
