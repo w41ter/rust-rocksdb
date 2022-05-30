@@ -78,6 +78,16 @@ unsafe extern "C" fn writebatch_delete_callback(state: *mut c_void, k: *const c_
 }
 
 impl WriteBatch {
+    pub fn new(data: &[u8]) -> Self {
+        unsafe {
+            let ptr = data.as_ptr();
+            let len = data.len();
+            Self {
+                inner: ffi::rocksdb_writebatch_create_from(ptr as *const libc::c_char, len as size_t),
+            }
+        }
+    }
+
     pub fn len(&self) -> usize {
         unsafe { ffi::rocksdb_writebatch_count(self.inner) as usize }
     }
