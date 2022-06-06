@@ -83,7 +83,10 @@ impl WriteBatch {
             let ptr = data.as_ptr();
             let len = data.len();
             Self {
-                inner: ffi::rocksdb_writebatch_create_from(ptr as *const libc::c_char, len as size_t),
+                inner: ffi::rocksdb_writebatch_create_from(
+                    ptr as *const libc::c_char,
+                    len as size_t,
+                ),
             }
         }
     }
