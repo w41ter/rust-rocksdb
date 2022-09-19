@@ -163,6 +163,9 @@ fn build_rocksdb() {
         config.define("OS_LINUX", None);
         config.define("ROCKSDB_PLATFORM_POSIX", None);
         config.define("ROCKSDB_LIB_IO_POSIX", None);
+        config.define("ROCKSDB_FALLOCATE_PRESENT", None);
+        config.define("ROCKSDB_RANGESYNC_PRESENT", None);
+        config.define("ROCKSDB_PTHREAD_ADAPTIVE_MUTEX", None);
     } else if target.contains("freebsd") {
         config.define("OS_FREEBSD", None);
         config.define("ROCKSDB_PLATFORM_POSIX", None);
