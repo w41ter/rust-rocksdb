@@ -34,6 +34,7 @@ use crate::{
     },
     slice_transform::SliceTransform,
     statistics::Ticker,
+    table_properties::{self, TablePropertiesCollectorFactory},
     ColumnFamilyDescriptor, Error, SnapshotWithThreadMode,
 };
 
@@ -3400,6 +3401,16 @@ impl Options {
     pub fn set_avoid_unnecessary_blocking_io(&mut self, val: bool) {
         unsafe {
             ffi::rocksdb_options_set_avoid_unnecessary_blocking_io(self.inner, u8::from(val));
+        }
+    }
+
+    pub fn add_table_properties_collector_factory<F>(&mut self, factory: F)
+    where
+        F: TablePropertiesCollectorFactory,
+    {
+        unsafe {
+            let factory = table_properties::create_table_properties_collector_factory(factory);
+            ffi::rocksdb_options_add_table_properties_collector_factory(self.inner, factory);
         }
     }
 }

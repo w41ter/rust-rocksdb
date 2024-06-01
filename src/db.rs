@@ -14,12 +14,11 @@
 //
 
 use crate::{
-    column_family::AsColumnFamilyRef,
-    column_family::BoundColumnFamily,
-    column_family::UnboundColumnFamily,
+    column_family::{AsColumnFamilyRef, BoundColumnFamily, UnboundColumnFamily},
     db_options::OptionsMustOutliveDB,
     ffi,
     ffi_util::{from_cstr, opt_bytes_to_ptr, raw_data, to_cpath, CStrLike},
+    table_properties::TablePropertiesCollection,
     ColumnFamily, ColumnFamilyDescriptor, CompactOptions, DBIteratorWithThreadMode,
     DBPinnableSlice, DBRawIteratorWithThreadMode, DBWALIterator, Direction, Error, FlushOptions,
     IngestExternalFileOptions, IteratorMode, Options, ReadOptions, SnapshotWithThreadMode,
@@ -2197,6 +2196,62 @@ impl<T: ThreadMode, D: DBInner> DBCommon<T, D> {
         // family handle by drop()-ing it
         drop(cf);
         Ok(())
+    }
+
+    pub fn get_properties_of_all_range(
+        &self,
+        cf: &impl AsColumnFamilyRef,
+    ) -> Result<TablePropertiesCollection, Error> {
+        unsafe {
+            let db = self.inner.inner();
+            let collection = ffi_try!(ffi::rocksdb_get_properties_of_all_range(db, cf.inner()));
+            let properties_collection = TablePropertiesCollection::from_raw(collection);
+            ffi::rocksdb_table_properties_collection_destroy(collection);
+            Ok(properties_collection)
+        }
+    }
+
+    pub fn get_properties_of_tables_in_range<K>(
+        &self,
+        cf: &impl AsColumnFamilyRef,
+        ranges: &[(K, K)],
+    ) -> Result<TablePropertiesCollection, Error>
+    where
+        K: AsRef<[u8]>,
+    {
+        unsafe {
+            let num_ranges = ranges.len();
+            let range_start_keys = ranges
+                .iter()
+                .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
+                .collect::<Vec<_>>();
+            let range_start_lens = ranges
+                .iter()
+                .map(|(k, _)| k.as_ref().len())
+                .collect::<Vec<_>>();
+            let range_limit_keys = ranges
+                .iter()
+                .map(|(_, v)| v.as_ref().as_ptr() as *const c_char)
+                .collect::<Vec<_>>();
+            let range_limit_lens = ranges
+                .iter()
+                .map(|(_, v)| v.as_ref().len())
+                .collect::<Vec<_>>();
+
+            let db = self.inner.inner();
+            let collection = ffi_try!(ffi::rocksdb_get_properties_of_tables_in_range(
+                db,
+                cf.inner(),
+                num_ranges,
+                range_start_keys.as_ptr(),
+                range_start_lens.as_ptr(),
+                range_limit_keys.as_ptr(),
+                range_limit_lens.as_ptr()
+            ));
+            let properties_collection = TablePropertiesCollection::from_raw(collection);
+            ffi::rocksdb_table_properties_collection_destroy(collection);
+            Ok(properties_collection)
+        }
     }
 }
 
