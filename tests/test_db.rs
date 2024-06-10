@@ -1569,3 +1569,26 @@ fn test_atomic_flush_cfs() {
         );
     }
 }
+
+#[test]
+fn test_get_approximate_sizes() {
+    let path = DBPath::new("_rust_rocksdb_get_approximate_sizes");
+    {
+        let mut opts = Options::default();
+        opts.create_if_missing(true);
+        opts.create_missing_column_families(true);
+
+        let db = DB::open_cf(&opts, &path, ["cf"]).unwrap();
+        let cf = db.cf_handle("cf").unwrap();
+        db.put_cf(&cf, b"k1", b"v1").unwrap();
+        db.put_cf(&cf, b"k2", b"v2").unwrap();
+        db.put_cf(&cf, b"k3", b"v3").unwrap();
+        db.put_cf(&cf, b"k4", b"v4").unwrap();
+        db.put_cf(&cf, b"k5", b"v5").unwrap();
+        db.flush_cf(&cf).unwrap();
+
+        let result = db.get_approximate_sizes(&cf, &[("k1", "k6")]).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0] > 0, "get size {}", result[0]);
+    }
+}

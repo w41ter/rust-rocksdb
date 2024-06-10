@@ -2253,6 +2253,51 @@ impl<T: ThreadMode, D: DBInner> DBCommon<T, D> {
             Ok(properties_collection)
         }
     }
+
+    /// Get the approximate sizes of the ranges.
+    pub fn get_approximate_sizes<K: AsRef<[u8]>>(
+        &self,
+        cf: &impl AsColumnFamilyRef,
+        ranges: &[(K, K)],
+    ) -> Result<Vec<u64>, Error> {
+        unsafe {
+            let num_ranges = ranges.len();
+            let range_start_keys = ranges
+                .iter()
+                .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
+                .collect::<Vec<_>>();
+            let range_start_lens = ranges
+                .iter()
+                .map(|(k, _)| k.as_ref().len())
+                .collect::<Vec<_>>();
+            let range_limit_keys = ranges
+                .iter()
+                .map(|(_, v)| v.as_ref().as_ptr() as *const c_char)
+                .collect::<Vec<_>>();
+            let range_limit_lens = ranges
+                .iter()
+                .map(|(_, v)| v.as_ref().len())
+                .collect::<Vec<_>>();
+
+            let include_flags = ffi::rocksdb_size_approximation_flags_include_memtable
+                | ffi::rocksdb_size_approximation_flags_include_files;
+            let mut sizes = vec![0u64; num_ranges];
+
+            let db = self.inner.inner();
+            ffi_try!(ffi::rocksdb_approximate_sizes_cf_with_flags(
+                db,
+                cf.inner(),
+                num_ranges as i32,
+                range_start_keys.as_ptr(),
+                range_start_lens.as_ptr(),
+                range_limit_keys.as_ptr(),
+                range_limit_lens.as_ptr(),
+                include_flags as u8,
+                sizes.as_mut_ptr()
+            ));
+            Ok(sizes)
+        }
+    }
 }
 
 impl<I: DBInner> DBCommon<SingleThreaded, I> {
